@@ -829,19 +829,19 @@ class BertLMHeadModel(BertPreTrainedModel):
 
     def forward(
         self,
-        input_ids=None,
-        attention_mask=None,
-        position_ids=None,
+        input_ids=None, # 单词id
+        attention_mask=None, # 与输入数据shape相同的矩阵，用于标识那些位置是padding，不应该被模型关注
+        position_ids=None, # 表示每个输入元素在序列中的位置
         head_mask=None,
         inputs_embeds=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
-        labels=None,
-        past_key_values=None,
-        use_cache=None,
+        labels=None, # 用于训练时的标签
+        past_key_values=None, # 用于传递前一个时间步计算的key和value，这在解码过程中可以提高计算速度
+        use_cache=None, # 如果设为True，那么会返回past_key_values
         output_attentions=None,
         output_hidden_states=None,
-        return_dict=None,
+        return_dict=None, # 返回一个包含所有信息的字典
         return_logits=False,            
         is_decoder=True,
         reduction='mean',
@@ -881,9 +881,9 @@ class BertLMHeadModel(BertPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         if labels is not None:
-            use_cache = False
+            use_cache = False  # 在训练过程中，我们使用真实标签，而不是上一步的预测结果，所以不需要cache
 
-        outputs = self.bert(
+        outputs = self.bert(  
             input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -898,36 +898,36 @@ class BertLMHeadModel(BertPreTrainedModel):
             return_dict=return_dict,
             is_decoder=is_decoder,
             mode=mode,
-        )
+        )  # 完成了所有的自注意力层和前馈层的计算
         
-        sequence_output = outputs[0]
-        prediction_scores = self.cls(sequence_output)
+        sequence_output = outputs[0] # 最后一层的输出 [32, 26, 768]; 表示了输入序列中每个token在最后一个隐藏层的表示，它的形状是 (batch_size, sequence_length, hidden_size)
+        prediction_scores = self.cls(sequence_output) # [32, 26, 30524] 使用self.cls对sequence_output进行变换，得到prediction_scores，也就是每个位置每个单词的分数: (batch_size, sequence_length, vocab_size)
         
-        if return_logits:
-            return prediction_scores[:, :-1, :].contiguous()  
+        if return_logits: # 如果return_logits为True，那么直接返回prediction_scores
+            return prediction_scores[:, :-1, :].contiguous()  # 用来确保返回的张量在内存中是连续存储的
 
         lm_loss = None
-        if labels is not None:
+        if labels is not None:  # LOSS 计算: 在计算loss时，我们要把预测得分和它后面的那个词的标签对应起来
             # we are doing next-token prediction; shift prediction scores and input ids by one
-            shifted_prediction_scores = prediction_scores[:, :-1, :].contiguous()
-            labels = labels[:, 1:].contiguous()
-            loss_fct = CrossEntropyLoss(reduction=reduction, label_smoothing=0.1) 
+            shifted_prediction_scores = prediction_scores[:, :-1, :].contiguous() # 首先把预测结果和标签都左移一位，然后调用CrossEntropyLoss计算损失
+            labels = labels[:, 1:].contiguous()  # 把label也移位,不需要DEC token; DEC token是输入, label和预测的结果都是针对下一个单词的; 所以DEC只是一个start token,没有特殊含义
+            loss_fct = CrossEntropyLoss(reduction=reduction, label_smoothing=0.1) # 比较预测的分布和真实的标签
             lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
-            if reduction=='none':
-                lm_loss = lm_loss.view(prediction_scores.size(0),-1).sum(1)               
+            if reduction=='none': # 每个样本的损失和; 此时是mean, 取平均值, 对所有输入样本的损失求平均，返回一个平均损失
+                lm_loss = lm_loss.view(prediction_scores.size(0),-1).sum(1)  # 3.2302             
 
-        if not return_dict:
+        if not return_dict: # 把所有信息打包成一个字典返回
             output = (prediction_scores,) + outputs[2:]
             return ((lm_loss,) + output) if lm_loss is not None else output
-
+        # Base class for causal language model (or autoregressive) outputs.
         return CausalLMOutputWithCrossAttentions(
             loss=lm_loss,
             logits=prediction_scores,
             past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
+            hidden_states=outputs.hidden_states,  ## outputs.hidden_states[-1]==outputs[0]
             attentions=outputs.attentions,
             cross_attentions=outputs.cross_attentions,
-        )
+        ) # 返回一个元组，元组的第一个元素是loss，后面是模型的其他输出
 
     def prepare_inputs_for_generation(self, input_ids, past=None, attention_mask=None, **model_kwargs):
         input_shape = input_ids.shape
