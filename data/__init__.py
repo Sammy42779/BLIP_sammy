@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
 
-from data.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_caption_eval, coco_karpathy_retrieval_eval
+from data.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_caption_eval, coco_karpathy_retrieval_eval, coco_karpathy_caption_eval_adv, coco_karpathy_caption_eval_adv_sga
 from data.nocaps_dataset import nocaps_eval
 from data.flickr30k_dataset import flickr30k_train, flickr30k_retrieval_eval
 from data.vqa_dataset import vqa_dataset
@@ -28,10 +28,26 @@ def create_dataset(dataset, config, min_scale=0.5):
         transforms.ToTensor(),
         normalize,
         ])  
+    
+    ## No normalization for attack
+    adv_transform_test= transforms.Compose([
+        transforms.Resize((config['image_size'],config['image_size']),interpolation=InterpolationMode.BICUBIC),
+        transforms.ToTensor(),
+        ])  
         
     if dataset=='pretrain':
         dataset = pretrain_dataset(config['train_file'], config['laion_path'], transform_train)              
         return dataset  
+    
+    # No normalization
+    elif dataset=='adv_caption_coco':   
+        test_dataset = coco_karpathy_caption_eval_adv(adv_transform_test, config['image_root'], config['ann_root'], 'test', prompt=config['prompt'])   
+        return test_dataset
+    
+    # No normalization
+    elif dataset=='adv_caption_coco_sga':   
+        test_dataset = coco_karpathy_caption_eval_adv_sga(adv_transform_test, config['image_root'], config['ann_root'], 'test', prompt=config['prompt'])   
+        return test_dataset
     
     elif dataset=='caption_coco':   
         train_dataset = coco_karpathy_train(transform_train, config['image_root'], config['ann_root'], prompt=config['prompt'])

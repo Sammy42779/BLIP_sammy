@@ -1,4 +1,7 @@
 import math
+import random
+from PIL import Image
+
 def cosine_lr_schedule(optimizer, epoch, max_epoch, init_lr, min_lr):
     """Decay the learning rate"""
     lr = (init_lr - min_lr) * 0.5 * (1. + math.cos(math.pi * epoch / max_epoch)) + min_lr
@@ -275,4 +278,21 @@ def init_distributed_mode(args):
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)        
         
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+
+def save_adv_datasets(adv_images_without_norm_all, adv_texts, adv_images_names, source_model, adv):
+    for i in range(len(adv_images_names)):
+        image = adv_images_without_norm_all[i]
+        image_PIL = Image.fromarray(image)
+        image_name = adv_images_names[i]
         
+    return
