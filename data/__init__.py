@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.transforms.functional import InterpolationMode
 
-from data.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_caption_eval, coco_karpathy_retrieval_eval, coco_karpathy_caption_eval_adv, coco_karpathy_caption_eval_adv_sga
+from data.coco_karpathy_dataset import coco_karpathy_train, coco_karpathy_caption_eval, coco_karpathy_retrieval_eval, coco_karpathy_caption_eval_adv, coco_karpathy_caption_eval_adv_sga, coco_karpathy_caption_eval_adv_save, coco_karpathy_caption_eval_adv_sga_save
 from data.nocaps_dataset import nocaps_eval
 from data.flickr30k_dataset import flickr30k_train, flickr30k_retrieval_eval
 from data.vqa_dataset import vqa_dataset
@@ -45,8 +45,18 @@ def create_dataset(dataset, config, min_scale=0.5):
         return test_dataset
     
     # No normalization
+    elif dataset=='adv_caption_coco_save':   
+        test_dataset = coco_karpathy_caption_eval_adv_save(adv_transform_test, config['image_root'], config['ann_root'], 'test', prompt=config['prompt'])     
+        return test_dataset
+    
+    # No normalization
     elif dataset=='adv_caption_coco_sga':   
         test_dataset = coco_karpathy_caption_eval_adv_sga(adv_transform_test, config['image_root'], config['ann_root'], 'test', prompt=config['prompt'])   
+        return test_dataset
+    
+    # No normalization
+    elif dataset=='adv_caption_coco_sga_save':   
+        test_dataset = coco_karpathy_caption_eval_adv_sga_save(adv_transform_test, config['image_root'], config['ann_root'], 'test', prompt=config['prompt'])   
         return test_dataset
     
     elif dataset=='caption_coco':   
