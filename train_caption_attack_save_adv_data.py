@@ -104,7 +104,9 @@ def evaluate(source_model, ref_model, data_loader, ref_tokenizer, device, config
             image = image.to(device)     
             images_idxs = [data_loader.dataset.txt2img[i.item()] for i in texts_idx]  # img_idx: [0,0,0] txt_idx: [0,1,2]
             if args.adv != 0:
-                adv_images, adv_texts = multi_attacker.run_caption(image, caption, adv=args.adv, num_iters=args.num_iters, alpha=args.alpha)  
+                adv_images, adv_texts = multi_attacker.run_caption(image, caption, adv=args.adv, num_iters=args.num_iters, alpha=args.alpha) 
+            elif args.adv == 0:
+                adv_images, adv_texts = image, caption
             adv_img_result[images_idxs] = adv_images.cpu().detach()
             adv_txt_result[texts_idx[0]:texts_idx[-1]+1] = adv_texts
             # image = images_normalize(image)
@@ -118,8 +120,8 @@ def evaluate(source_model, ref_model, data_loader, ref_tokenizer, device, config
                 
             torch.cuda.empty_cache()
             # i += 1
-    torch.save(adv_img_result, os.path.join(f'/home/zhengf/ld/BLIP_sammy/transfer_data/adv{args.adv}', f'BLIP_{args.source_model}_adv_images.ts'))
-    torch.save(adv_txt_result, os.path.join(f'/home/zhengf/ld/BLIP_sammy/transfer_data/adv{args.adv}', f'BLIP_{args.source_model}_adv_texts.ts'))
+    torch.save(adv_img_result, os.path.join(f'/ssd1/ld_code/BLIP_sammy/transfer_data/adv{args.adv}', f'BLIP_{args.source_model}_adv_images.ts'))
+    torch.save(adv_txt_result, os.path.join(f'/ssd1/ld_code/BLIP_sammy/transfer_data/adv{args.adv}', f'BLIP_{args.source_model}_adv_texts.ts'))
     # utils.save_adv_datasets(adv_images_without_norm_all, adv_texts, adv_images_names, args.source_model, args.adv)
     
     # return result
@@ -212,12 +214,12 @@ def main(args, source_config):
 if __name__ == '__main__':
     
     utils.set_seed(42)
-    os.environ['CUDA_VISIBLE_DEVICES'] = '8'
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     # print('train_caption_attack')
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='/home/zhengf/ld/BLIP_sammy/configs/caption_coco_capfilt_L.yaml')
+    parser.add_argument('--config', default='/ssd1/ld_code/BLIP_sammy/configs/caption_coco_capfilt_L.yaml')
     parser.add_argument('--output_dir', default='output/Caption_coco')        
     parser.add_argument('--evaluate', action='store_true')    
     parser.add_argument('--device', default='cuda')
@@ -227,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--distributed', default=True, type=bool)
     
     parser.add_argument('--batch_size', default=1, type=int, help='Clean-Eval:64, Sep-Attack:32, Co-Attack:16')  
-    parser.add_argument('--text_encoder', default='/home/zhengf/.cache/bert-base-uncased')
+    parser.add_argument('--text_encoder', default='/home/ludong/.cache/bert-base-uncased')
     parser.add_argument('--adv', default=6, type=int, help='0=Clean-Eval, 3=Sep-Attack, 4=Co-Attack')  
     parser.add_argument('--epsilon', default=2, type=int)
     parser.add_argument('--num_iters', default=10, type=int)  
@@ -240,7 +242,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    source_model_config = f'/home/zhengf/ld/BLIP_sammy/configs/caption_coco_{args.source_model}.yaml'
+    source_model_config = f'/ssd1/ld_code/BLIP_sammy/configs/caption_coco_{args.source_model}_110.yaml'
     # target_model_config = f'/home/zhengf/ld/BLIP_sammy/configs/caption_coco_{args.target_model}.yaml'
 
     source_config = yaml.load(open(source_model_config, 'r'), Loader=yaml.Loader)
